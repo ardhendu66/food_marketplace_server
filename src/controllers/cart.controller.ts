@@ -1,0 +1,48 @@
+import { Request, Response } from "express";
+import cartService from "../services/cart.service";
+import { catchAsync } from "../utils/catchAsync";
+import { UnauthorizedError } from "../utils/GlobalError";
+
+const getCart = catchAsync(async (req: Request, res: Response) => {
+    console.log(`GET /api/v1/cart`);
+    const userId = req.user!._id;
+    const cart = await cartService.getCart(userId);
+    return res.status(200).json({
+        cart,
+        message: cart ? undefined : "Cart is empty",
+    });
+});
+
+const addItem = catchAsync(async (req: Request, res: Response) => {
+    const userId = req.user!._id;
+    const { restaurantId, menuItemId } = req.params;
+    console.log(`POST /api/v1/cart/${restaurantId}/${menuItemId}`); 
+    const { price } = req.query;
+    if(typeof price !== "string") {
+        console.log("Please ensure you entered correct price query format");        
+        throw new UnauthorizedError("Please ensure you entered correct price query format");
+    }
+    const cart = await cartService.addItem(userId, restaurantId as string, menuItemId as string, Number(price));
+    return res.status(201).json({
+        cart, message: "Item added to Cart"
+    });
+});
+
+const removeItem = catchAsync(async (req: Request, res: Response) => {
+    const userId = req.user!._id;
+    const { menuItemId } = req.params;
+    console.log(`PUT /api/v1/cart/${menuItemId}`);
+    const cart = await cartService.removeItem(userId, menuItemId as string);
+    return res.status(202).json({
+        cart, message: cart ? "Item removed from Cart" : "Cart is Empty"
+    });
+});
+
+const clearCart = catchAsync(async (req: Request, res: Response) => {
+    console.log(`DELETE /api/v1/cart`);
+    const userId = req.user!._id;
+    await cartService.clearCart(userId);
+    return res.status(202).json({ message: "Cart cleared successfully" });
+});
+
+export { getCart, addItem, removeItem, clearCart };
